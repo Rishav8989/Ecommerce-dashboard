@@ -7,8 +7,7 @@ import (
 	"fmt"
 	"log"
 
-	"backend/products"
-
+	"github.com/Rishav8989/Ecommerce-dashboard/dataset"
 	_ "github.com/mattn/go-sqlite3"
 )
 
@@ -19,21 +18,21 @@ func run() error {
 	ctx := context.Background()
 
 	// Open the SQLite database
-	db, err := sql.Open("sqlite3", "database/olist.sqlite")
+	db, err := sql.Open("sqlite3", "olist.sqlite")
 	if err != nil {
 		return err
 	}
 	defer db.Close()
 
-	// Execute the schema to create tables if they don't exist
-	if _, err := db.Exec(ddl); err != nil {
-		return err
-	}
+	// // Execute the schema to create tables if they don't exist
+	// if _, err := db.Exec(ddl); err != nil {
+	// 	return err
+	// }
 
-	queries := products.New(db)
+	queries := dataset.New(db)
 
-	// Fetch the product with id 732
-	productList, err := queries.GetProduct(ctx, 732)
+	uniqueID := sql.NullString{String: "e481f51cbdc54678b7cc49136f2d6af7", Valid: true}
+	productList, err := queries.SearchOrderItemsByOrderID(ctx, uniqueID)
 	if err != nil {
 		return err
 	}
