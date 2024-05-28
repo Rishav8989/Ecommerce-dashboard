@@ -3,46 +3,39 @@ package main
 import (
 	"context"
 	"database/sql"
-	_ "embed"
-	"fmt"
 	"log"
+	"net/http"
 
 	"github.com/Rishav8989/Ecommerce-dashboard/dataset"
+	"github.com/gin-gonic/gin"
 	_ "github.com/mattn/go-sqlite3"
 )
 
-//go:embed schema.sql
-var ddl string
+func main() {
+	router := gin.Default()
 
-func run() error {
-	ctx := context.Background()
-
-	// Open the SQLite database
+	// Connect to the SQLite database
 	db, err := sql.Open("sqlite3", "olist.sqlite")
 	if err != nil {
-		return err
+		log.Fatalf("failed to connect to the database: %v", err)
 	}
 	defer db.Close()
 
-	// // Execute the schema to create tables if they don't exist
-	// if _, err := db.Exec(ddl); err != nil {
-	// 	return err
-	// }
-
 	queries := dataset.New(db)
 
-	uniqueID := sql.NullString{String: "e481f51cbdc54678b7cc49136f2d6af7", Valid: true}
-	productList, err := queries.SearchOrderItemsByOrderID(ctx, uniqueID)
-	if err != nil {
-		return err
-	}
+	router.GET("/order-items/:id", func(c *gin.Context) {
+		ctx := context.Background()
+		orderID := c.Param("id")
+		nullStringID := sql.NullString{String: orderID, Valid: true}
 
-	fmt.Println(productList)
-	return nil
-}
+		productList, err := queries.SearchOrderItemsByOrderID(ctx, nullStringID)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
 
-func main() {
-	if err := run(); err != nil {
-		log.Fatal(err)
-	}
+		c.JSON(http.StatusOK, productList)
+	})
+
+	router.Run(":8080") // Run on port 8080
 }
