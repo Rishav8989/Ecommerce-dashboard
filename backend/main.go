@@ -23,18 +23,84 @@ func main() {
 
 	queries := dataset.New(db)
 
-	router.GET("/order-items/:id", func(c *gin.Context) {
+	router.GET("/GetSalesByCategory", func(c *gin.Context) {
 		ctx := context.Background()
-		orderID := c.Param("id")
-		nullStringID := sql.NullString{String: orderID, Valid: true}
-
-		productList, err := queries.SearchOrderItemsByOrderID(ctx, nullStringID)
+		data, err := queries.GetSalesByCategory(ctx)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
+		c.JSON(http.StatusOK, data)
+	})
 
-		c.JSON(http.StatusOK, productList)
+	router.GET("/GetCustomerDistributionByState", func(c *gin.Context) {
+		ctx := context.Background()
+		data, err := queries.GetCustomerDistributionByState(ctx)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusOK, data)
+	})
+
+	router.GET("/GetTopSellersBySales", func(c *gin.Context) {
+		ctx := context.Background()
+		data, err := queries.GetTopSellersBySales(ctx)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusOK, data)
+	})
+
+	router.GET("/GetReviewScoreDistribution", func(c *gin.Context) {
+		ctx := context.Background()
+		data, err := queries.GetReviewScoreDistribution(ctx)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusOK, data)
+	})
+
+	router.GET("/GetAverageReviewScoreOverTime", func(c *gin.Context) {
+		ctx := context.Background()
+		data, err := queries.GetAverageReviewScoreOverTime(ctx)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusOK, data)
+	})
+
+	router.GET("/GetPaymentMethodsDistribution", func(c *gin.Context) {
+		ctx := context.Background()
+		data, err := queries.GetPaymentMethodsDistribution(ctx)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusOK, data)
+	})
+
+	router.GET("/GetInstallmentsUsage", func(c *gin.Context) {
+		ctx := context.Background()
+		data, err := queries.GetInstallmentsUsage(ctx)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusOK, data)
+	})
+
+	router.GET("/GetTotalSalesOverTime", func(c *gin.Context) {
+		ctx := context.Background()
+		data, err := queries.GetTotalSalesOverTime(ctx)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusOK, data)
 	})
 
 	router.Run(":8080") // Run on port 8080

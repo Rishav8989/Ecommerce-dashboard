@@ -10,52 +10,33 @@ import (
 	"database/sql"
 )
 
-const searchCustomerByUniqueID = `-- name: SearchCustomerByUniqueID :one
-SELECT customer_id, customer_unique_id, customer_zip_code_prefix, customer_city, customer_state FROM customers WHERE customer_unique_id = ?
+const getAverageReviewScoreOverTime = `-- name: GetAverageReviewScoreOverTime :many
+SELECT 
+  strftime('%Y-%m', review_creation_date) AS month, 
+  AVG(review_score) AS average_review_score
+FROM 
+  order_reviews
+GROUP BY 
+  month
+ORDER BY 
+  month
 `
 
-func (q *Queries) SearchCustomerByUniqueID(ctx context.Context, customerUniqueID sql.NullString) (Customer, error) {
-	row := q.db.QueryRowContext(ctx, searchCustomerByUniqueID, customerUniqueID)
-	var i Customer
-	err := row.Scan(
-		&i.CustomerID,
-		&i.CustomerUniqueID,
-		&i.CustomerZipCodePrefix,
-		&i.CustomerCity,
-		&i.CustomerState,
-	)
-	return i, err
+type GetAverageReviewScoreOverTimeRow struct {
+	Month              interface{}
+	AverageReviewScore sql.NullFloat64
 }
 
-const searchLeadsClosedBySellerID = `-- name: SearchLeadsClosedBySellerID :many
-SELECT mql_id, seller_id, sdr_id, sr_id, won_date, business_segment, lead_type, lead_behaviour_profile, has_company, has_gtin, average_stock, business_type, declared_product_catalog_size, declared_monthly_revenue FROM leads_closed WHERE seller_id = ?
-`
-
-func (q *Queries) SearchLeadsClosedBySellerID(ctx context.Context, sellerID sql.NullString) ([]LeadsClosed, error) {
-	rows, err := q.db.QueryContext(ctx, searchLeadsClosedBySellerID, sellerID)
+func (q *Queries) GetAverageReviewScoreOverTime(ctx context.Context) ([]GetAverageReviewScoreOverTimeRow, error) {
+	rows, err := q.db.QueryContext(ctx, getAverageReviewScoreOverTime)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []LeadsClosed
+	var items []GetAverageReviewScoreOverTimeRow
 	for rows.Next() {
-		var i LeadsClosed
-		if err := rows.Scan(
-			&i.MqlID,
-			&i.SellerID,
-			&i.SdrID,
-			&i.SrID,
-			&i.WonDate,
-			&i.BusinessSegment,
-			&i.LeadType,
-			&i.LeadBehaviourProfile,
-			&i.HasCompany,
-			&i.HasGtin,
-			&i.AverageStock,
-			&i.BusinessType,
-			&i.DeclaredProductCatalogSize,
-			&i.DeclaredMonthlyRevenue,
-		); err != nil {
+		var i GetAverageReviewScoreOverTimeRow
+		if err := rows.Scan(&i.Month, &i.AverageReviewScore); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -69,25 +50,31 @@ func (q *Queries) SearchLeadsClosedBySellerID(ctx context.Context, sellerID sql.
 	return items, nil
 }
 
-const searchLeadsQualifiedByLandingPageID = `-- name: SearchLeadsQualifiedByLandingPageID :many
-SELECT mql_id, first_contact_date, landing_page_id, origin FROM leads_qualified WHERE landing_page_id = ?
+const getCustomerDistributionByState = `-- name: GetCustomerDistributionByState :many
+SELECT 
+  customer_state, 
+  COUNT(*) AS customer_count
+FROM 
+  customers
+GROUP BY 
+  customer_state
 `
 
-func (q *Queries) SearchLeadsQualifiedByLandingPageID(ctx context.Context, landingPageID sql.NullString) ([]LeadsQualified, error) {
-	rows, err := q.db.QueryContext(ctx, searchLeadsQualifiedByLandingPageID, landingPageID)
+type GetCustomerDistributionByStateRow struct {
+	CustomerState sql.NullString
+	CustomerCount int64
+}
+
+func (q *Queries) GetCustomerDistributionByState(ctx context.Context) ([]GetCustomerDistributionByStateRow, error) {
+	rows, err := q.db.QueryContext(ctx, getCustomerDistributionByState)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []LeadsQualified
+	var items []GetCustomerDistributionByStateRow
 	for rows.Next() {
-		var i LeadsQualified
-		if err := rows.Scan(
-			&i.MqlID,
-			&i.FirstContactDate,
-			&i.LandingPageID,
-			&i.Origin,
-		); err != nil {
+		var i GetCustomerDistributionByStateRow
+		if err := rows.Scan(&i.CustomerState, &i.CustomerCount); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -101,28 +88,33 @@ func (q *Queries) SearchLeadsQualifiedByLandingPageID(ctx context.Context, landi
 	return items, nil
 }
 
-const searchOrderItemsByOrderID = `-- name: SearchOrderItemsByOrderID :many
-SELECT order_id, order_item_id, product_id, seller_id, shipping_limit_date, price, freight_value FROM order_items WHERE order_id = ?
+const getInstallmentsUsage = `-- name: GetInstallmentsUsage :many
+SELECT 
+  payment_installments, 
+  COUNT(*) AS installment_count
+FROM 
+  order_payments
+GROUP BY 
+  payment_installments
+ORDER BY 
+  payment_installments
 `
 
-func (q *Queries) SearchOrderItemsByOrderID(ctx context.Context, orderID sql.NullString) ([]OrderItem, error) {
-	rows, err := q.db.QueryContext(ctx, searchOrderItemsByOrderID, orderID)
+type GetInstallmentsUsageRow struct {
+	PaymentInstallments sql.NullInt64
+	InstallmentCount    int64
+}
+
+func (q *Queries) GetInstallmentsUsage(ctx context.Context) ([]GetInstallmentsUsageRow, error) {
+	rows, err := q.db.QueryContext(ctx, getInstallmentsUsage)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []OrderItem
+	var items []GetInstallmentsUsageRow
 	for rows.Next() {
-		var i OrderItem
-		if err := rows.Scan(
-			&i.OrderID,
-			&i.OrderItemID,
-			&i.ProductID,
-			&i.SellerID,
-			&i.ShippingLimitDate,
-			&i.Price,
-			&i.FreightValue,
-		); err != nil {
+		var i GetInstallmentsUsageRow
+		if err := rows.Scan(&i.PaymentInstallments, &i.InstallmentCount); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -136,29 +128,33 @@ func (q *Queries) SearchOrderItemsByOrderID(ctx context.Context, orderID sql.Nul
 	return items, nil
 }
 
-const searchOrdersByCustomerID = `-- name: SearchOrdersByCustomerID :many
-SELECT order_id, customer_id, order_status, order_purchase_timestamp, order_approved_at, order_delivered_carrier_date, order_delivered_customer_date, order_estimated_delivery_date FROM orders WHERE customer_id = ?
+const getPaymentMethodsDistribution = `-- name: GetPaymentMethodsDistribution :many
+SELECT 
+  payment_type, 
+  COUNT(*) AS payment_count
+FROM 
+  order_payments
+GROUP BY 
+  payment_type
+ORDER BY 
+  payment_count DESC
 `
 
-func (q *Queries) SearchOrdersByCustomerID(ctx context.Context, customerID sql.NullString) ([]Order, error) {
-	rows, err := q.db.QueryContext(ctx, searchOrdersByCustomerID, customerID)
+type GetPaymentMethodsDistributionRow struct {
+	PaymentType  sql.NullString
+	PaymentCount int64
+}
+
+func (q *Queries) GetPaymentMethodsDistribution(ctx context.Context) ([]GetPaymentMethodsDistributionRow, error) {
+	rows, err := q.db.QueryContext(ctx, getPaymentMethodsDistribution)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Order
+	var items []GetPaymentMethodsDistributionRow
 	for rows.Next() {
-		var i Order
-		if err := rows.Scan(
-			&i.OrderID,
-			&i.CustomerID,
-			&i.OrderStatus,
-			&i.OrderPurchaseTimestamp,
-			&i.OrderApprovedAt,
-			&i.OrderDeliveredCarrierDate,
-			&i.OrderDeliveredCustomerDate,
-			&i.OrderEstimatedDeliveryDate,
-		); err != nil {
+		var i GetPaymentMethodsDistributionRow
+		if err := rows.Scan(&i.PaymentType, &i.PaymentCount); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -172,39 +168,171 @@ func (q *Queries) SearchOrdersByCustomerID(ctx context.Context, customerID sql.N
 	return items, nil
 }
 
-const searchProductByID = `-- name: SearchProductByID :one
-SELECT product_id, product_category_name, product_name_length, product_description_length, product_photos_qty, product_weight_g, product_length_cm, product_height_cm, product_width_cm FROM products WHERE product_id = ?
+const getReviewScoreDistribution = `-- name: GetReviewScoreDistribution :many
+SELECT 
+  review_score, 
+  COUNT(*) AS review_count
+FROM 
+  order_reviews
+GROUP BY 
+  review_score
+ORDER BY 
+  review_score
 `
 
-func (q *Queries) SearchProductByID(ctx context.Context, productID sql.NullString) (Product, error) {
-	row := q.db.QueryRowContext(ctx, searchProductByID, productID)
-	var i Product
-	err := row.Scan(
-		&i.ProductID,
-		&i.ProductCategoryName,
-		&i.ProductNameLength,
-		&i.ProductDescriptionLength,
-		&i.ProductPhotosQty,
-		&i.ProductWeightG,
-		&i.ProductLengthCm,
-		&i.ProductHeightCm,
-		&i.ProductWidthCm,
-	)
-	return i, err
+type GetReviewScoreDistributionRow struct {
+	ReviewScore sql.NullInt64
+	ReviewCount int64
 }
 
-const searchSellerByID = `-- name: SearchSellerByID :one
-SELECT seller_id, seller_zip_code_prefix, seller_city, seller_state FROM sellers WHERE seller_id = ?
+func (q *Queries) GetReviewScoreDistribution(ctx context.Context) ([]GetReviewScoreDistributionRow, error) {
+	rows, err := q.db.QueryContext(ctx, getReviewScoreDistribution)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetReviewScoreDistributionRow
+	for rows.Next() {
+		var i GetReviewScoreDistributionRow
+		if err := rows.Scan(&i.ReviewScore, &i.ReviewCount); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getSalesByCategory = `-- name: GetSalesByCategory :many
+SELECT 
+  pcn.product_category_name_english, 
+  SUM(oi.price) AS total_sales
+FROM 
+  order_items oi
+JOIN 
+  products p ON oi.product_id = p.product_id
+JOIN 
+  product_category_name_translation pcn ON p.product_category_name = pcn.product_category_name
+GROUP BY 
+  pcn.product_category_name_english
+ORDER BY 
+  total_sales DESC
 `
 
-func (q *Queries) SearchSellerByID(ctx context.Context, sellerID sql.NullString) (Seller, error) {
-	row := q.db.QueryRowContext(ctx, searchSellerByID, sellerID)
-	var i Seller
-	err := row.Scan(
-		&i.SellerID,
-		&i.SellerZipCodePrefix,
-		&i.SellerCity,
-		&i.SellerState,
-	)
-	return i, err
+type GetSalesByCategoryRow struct {
+	ProductCategoryNameEnglish sql.NullString
+	TotalSales                 sql.NullFloat64
+}
+
+func (q *Queries) GetSalesByCategory(ctx context.Context) ([]GetSalesByCategoryRow, error) {
+	rows, err := q.db.QueryContext(ctx, getSalesByCategory)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetSalesByCategoryRow
+	for rows.Next() {
+		var i GetSalesByCategoryRow
+		if err := rows.Scan(&i.ProductCategoryNameEnglish, &i.TotalSales); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getTopSellersBySales = `-- name: GetTopSellersBySales :many
+SELECT 
+  s.seller_id, 
+  SUM(oi.price) AS total_sales
+FROM 
+  order_items oi
+JOIN 
+  sellers s ON oi.seller_id = s.seller_id
+GROUP BY 
+  s.seller_id
+ORDER BY 
+  total_sales DESC
+LIMIT 10
+`
+
+type GetTopSellersBySalesRow struct {
+	SellerID   sql.NullString
+	TotalSales sql.NullFloat64
+}
+
+func (q *Queries) GetTopSellersBySales(ctx context.Context) ([]GetTopSellersBySalesRow, error) {
+	rows, err := q.db.QueryContext(ctx, getTopSellersBySales)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetTopSellersBySalesRow
+	for rows.Next() {
+		var i GetTopSellersBySalesRow
+		if err := rows.Scan(&i.SellerID, &i.TotalSales); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getTotalSalesOverTime = `-- name: GetTotalSalesOverTime :many
+SELECT 
+  strftime('%Y-%m', order_purchase_timestamp) AS month, 
+  SUM(oi.price) AS total_sales
+FROM 
+  orders o
+JOIN 
+  order_items oi ON o.order_id = oi.order_id
+GROUP BY 
+  month
+ORDER BY 
+  month
+`
+
+type GetTotalSalesOverTimeRow struct {
+	Month      interface{}
+	TotalSales sql.NullFloat64
+}
+
+func (q *Queries) GetTotalSalesOverTime(ctx context.Context) ([]GetTotalSalesOverTimeRow, error) {
+	rows, err := q.db.QueryContext(ctx, getTotalSalesOverTime)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetTotalSalesOverTimeRow
+	for rows.Next() {
+		var i GetTotalSalesOverTimeRow
+		if err := rows.Scan(&i.Month, &i.TotalSales); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
